@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テイワット・ガムトーク</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #1e1e2f;
+            color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #ffd700;
+        }
+        .card {
+            background-color: #2b2b40;
+            border: 2px solid #4a4a75;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            padding: 24px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+            box-sizing: border-box;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .theme-item {
+            padding: 12px 16px;
+            margin: 10px 0;
+            background-color: #383854;
+            border-radius: 8px;
+            font-size: 1rem;
+            border: 1.5px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .theme-item:hover {
+            background-color: #424266;
+            border-color: #6a6a99;
+        }
+        /* ハイライト（★今ココ文字なし・枠線と背景色のみ） */
+        .theme-item.highlight {
+            background-color: #4a3b1c;
+            border-color: #ffd700;
+            color: #ffd700;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+        .number {
+            display: inline-block;
+            width: 24px;
+            text-align: center;
+            margin-right: 8px;
+            opacity: 0.8;
+        }
+        .btn-container {
+            margin-top: 24px;
+            text-align: center;
+        }
+        button {
+            background-color: #ffd700;
+            color: #1e1e2f;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        button:hover {
+            background-color: #ffea70;
+        }
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .hint {
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: #aaa;
+            text-align: center;
+            padding: 0 20px;
+            line-height: 1.4;
+        }
+        .loading {
+            text-align: center;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>原神トークテーマ</h1>
+
+    <div class="card" id="cardContainer">
+        <div class="loading" id="loadingText">スプレッドシートからデータを取得中...</div>
+    </div>
+
+    <div class="btn-container">
+        <button id="drawBtn" onclick="drawCard()" disabled>新しいカードを引く</button>
+    </div>
+
+    <div class="hint">
+        ※金色に光るお題が現在のお題です。<br>他のお題をタップして切り替えることもできます。
+    </div>
+
+    <script>
+        // ★ここにGASのウェブアプリURLを貼り付けます★
+        const apiUrl = "https://script.google.com/macros/s/AKfycbx6xh1C1aJ_W2z2hJKU32Zy95OFeNBmBWhleamR3i-znclkhAIwaPVB8-ZgHLi53MmJ/exec";
+
+        let categoryData = {};
+        let currentSelectedThemes = [];
+        let currentHighlightIndex = 0;
+
+        // データ取得関数
+        async function fetchThemes() {
+            try {
+                const response = await fetch(apiUrl);
+                categoryData = await response.json();
+                
+                const categories = Object.keys(categoryData);
+                if (categories.length < 4) {
+                    document.getElementById("loadingText").innerText = "有効なカテゴリが4つ以上見つかりません。スプレッドシートを確認してください。";
+                    return;
+                }
+
+                document.getElementById("drawBtn").disabled = false;
+                drawCard();
+
+            } catch (error) {
+                console.error("データの取得に失敗しました:", error);
+                document.getElementById("loadingText").innerText = "データの読み込みに失敗しました。URLを確認してください。";
+            }
+        }
+
+        // 新しいカードを引く（カテゴリ抽選 ➔ ワード抽選）
+        function drawCard() {
+            const categories = Object.keys(categoryData);
+            if (categories.length < 4) return;
+
+            // 1. カテゴリをランダムに4つ選ぶ（重複なし）
+            const shuffledCategories = [...categories].sort(() => 0.5 - Math.random());
+            const selectedCategories = shuffledCategories.slice(0, 4);
+
+            // 2. 選ばれた各カテゴリから、ワードをランダムに1つずつ選ぶ
+            currentSelectedThemes = selectedCategories.map(cat => {
+                const words = categoryData[cat];
+                const randomWord = words[Math.floor(Math.random() * words.length)];
+                return randomWord;
+            });
+
+            // 3. 4つのうちどれか1つをハイライトに決定
+            currentHighlightIndex = Math.floor(Math.random() * 4);
+
+            renderCard();
+        }
+
+        // 画面を描画する関数
+        function renderCard() {
+            const container = document.getElementById("cardContainer");
+            container.innerHTML = "";
+
+            currentSelectedThemes.forEach((theme, index) => {
+                const item = document.createElement("div");
+                item.className = "theme-item";
+                
+                if (index === currentHighlightIndex) {
+                    item.classList.add("highlight");
+                    // 「★今ここ！」の表記を削除し、番号とテーマのみに
+                    item.innerHTML = `<span class="number">[${index + 1}]</span>${theme}`;
+                } else {
+                    item.innerHTML = `<span class="number">[${index + 1}]</span>${theme}`;
+                }
+
+                // タップでハイライト移動
+                item.onclick = () => {
+                    currentHighlightIndex = index;
+                    renderCard();
+                };
+                
+                container.appendChild(item);
+            });
+        }
+
+        fetchThemes();
+    </script>
+
+</body>
+</html>
