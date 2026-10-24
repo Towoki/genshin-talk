@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>原神トークテーマ</title>
+    <title>原神トークテーマルーレット</title>
 
+    <!-- PWA / スマホのホーム画面用設定 ＆ ファビコン -->
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1e1e2f">
-    
+
     <style>
         body {
             font-family: sans-serif;
@@ -57,7 +59,7 @@
             background-color: #424266;
             border-color: #6a6a99;
         }
-        /* ハイライト（★今ココ文字なし・枠線と背景色のみ） */
+        /* ハイライト（枠線と背景色のみ） */
         .theme-item.highlight {
             background-color: #4a3b1c;
             border-color: #ffd700;
@@ -80,8 +82,8 @@
             background-color: #ffd700;
             color: #1e1e2f;
             border: none;
-            padding: 12px 24px;
-            font-size: 1rem;
+            padding: 12px 32px;
+            font-size: 1.1rem;
             font-weight: bold;
             border-radius: 30px;
             cursor: pointer;
@@ -95,6 +97,15 @@
             background-color: #666;
             cursor: not-allowed;
             box-shadow: none;
+        }
+        /* ストップ中のボタンの見た目（赤系に変える例） */
+        button.stop-mode {
+            background-color: #ff4d4d;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(255, 77, 77, 0.3);
+        }
+        button.stop-mode:hover {
+            background-color: #ff6b6b;
         }
         .hint {
             margin-top: 16px;
@@ -112,14 +123,15 @@
 </head>
 <body>
 
-    <h1>原神トークテーマ</h1>
+    <h1>原神トークテーマルーレット</h1>
 
     <div class="card" id="cardContainer">
         <div class="loading" id="loadingText">スプレッドシートからデータを取得中...</div>
     </div>
 
     <div class="btn-container">
-        <button id="drawBtn" onclick="drawCard()" disabled>新しいカードを引く</button>
+        <!-- スタート/ストップを兼ねたボタンに変更 -->
+        <button id="rouletteButton" onclick="toggleRoulette()" disabled>スタート</button>
     </div>
 
     <div class="hint">
@@ -127,12 +139,16 @@
     </div>
 
     <script>
-        // ★ここにGASのウェブアプリURLを貼り付けます★
+        // ★ここにGASのウェブアプリURLが入っています★
         const apiUrl = "https://script.google.com/macros/s/AKfycbx6xh1C1aJ_W2z2hJKU32Zy95OFeNBmBWhleamR3i-znclkhAIwaPVB8-ZgHLi53MmJ/exec";
 
         let categoryData = {};
         let currentSelectedThemes = [];
         let currentHighlightIndex = 0;
+
+        // ルーレット用の変数
+        let isRolling = false;
+        let rollInterval = null;
 
         // データ取得関数
         async function fetchThemes() {
@@ -146,8 +162,10 @@
                     return;
                 }
 
-                document.getElementById("drawBtn").disabled = false;
-                drawCard();
+                document.getElementById("rouletteButton").disabled = false;
+                // 初回は自動で1回分を確定表示しておく
+                executeDrawLogic();
+                renderCard();
 
             } catch (error) {
                 console.error("データの取得に失敗しました:", error);
@@ -155,11 +173,43 @@
             }
         }
 
-        // 新しいカードを引く（カテゴリ抽選 ➔ ワード抽選）
-        function drawCard() {
+        // ボタンが押されたときの処理（スタート / ストップのトグル）
+        function toggleRoulette() {
             const categories = Object.keys(categoryData);
             if (categories.length < 4) return;
 
+            const btn = document.getElementById("rouletteButton");
+
+            if (!isRolling) {
+                // --- 【スタート】ジャラララと回し始める ---
+                isRolling = true;
+                btn.textContent = "ストップ！";
+                btn.classList.add("stop-mode");
+
+                // 一定間隔（0.05秒おき）にシャッフル表示を繰り返す
+                rollInterval = setInterval(() => {
+                    executeDrawLogic();
+                    renderCard();
+                }, 50);
+
+            } else {
+                // --- 【ストップ】ピタッと止める ---
+                isRolling = false;
+                clearInterval(rollInterval);
+
+                // 最終結果をもう一度しっかり計算して確定
+                executeDrawLogic();
+                renderCard();
+
+                btn.textContent = "スタート";
+                btn.classList.remove("stop-mode");
+            }
+        }
+
+        // 抽選の計算処理（ランダムに4つ選ぶ）
+        function executeDrawLogic() {
+            const categories = Object.keys(categoryData);
+            
             // 1. カテゴリをランダムに4つ選ぶ（重複なし）
             const shuffledCategories = [...categories].sort(() => 0.5 - Math.random());
             const selectedCategories = shuffledCategories.slice(0, 4);
@@ -173,8 +223,6 @@
 
             // 3. 4つのうちどれか1つをハイライトに決定
             currentHighlightIndex = Math.floor(Math.random() * 4);
-
-            renderCard();
         }
 
         // 画面を描画する関数
@@ -188,14 +236,13 @@
                 
                 if (index === currentHighlightIndex) {
                     item.classList.add("highlight");
-                    // 「★今ここ！」の表記を削除し、番号とテーマのみに
-                    item.innerHTML = `<span class="number">[${index + 1}]</span>${theme}`;
-                } else {
-                    item.innerHTML = `<span class="number">[${index + 1}]</span>${theme}`;
                 }
+                
+                item.innerHTML = `<span class="number">[${index + 1}]</span>${theme}`;
 
-                // タップでハイライト移動
+                // タップでハイライト移動（ルーレット中は誤作動防止で無効化）
                 item.onclick = () => {
+                    if (isRolling) return;
                     currentHighlightIndex = index;
                     renderCard();
                 };
