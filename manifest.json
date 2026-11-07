@@ -1,10 +1,11 @@
 {
-  "name": "原神トークテーマルーレット",
-  "short_name": "原神トークテーマルーレット",
+  "name": "原神トークテーマ",
+  "short_name": "原神トークテーマ",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1e1e2f",
   "theme_color": "#1e1e2f",
+  "id": "/genshin-talk-theme/",
   "icons": [
     {
       "src": "icon-192.png",
