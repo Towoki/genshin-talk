@@ -36,29 +36,36 @@
             margin-bottom: 20px;
             text-align: center;
         }
+        /* 枠の高さを固定してボタンの座標ズレを防止 */
         .card {
             background-color: #2b2b40;
             border: 2px solid #4a4a75;
             border-radius: 12px;
             width: 90%;
             max-width: 450px;
-            padding: 24px;
+            height: 310px;
+            padding: 20px 24px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.4);
             box-sizing: border-box;
-            min-height: 250px;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
+        .card.has-items {
+            justify-content: space-between;
+        }
         .theme-item {
-            padding: 12px 16px;
-            margin: 10px 0;
+            padding: 10px 14px;
+            margin: 4px 0;
             background-color: #383854;
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             border: 1.5px solid transparent;
             cursor: pointer;
             transition: all 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .theme-item:hover {
             background-color: #424266;
@@ -117,10 +124,23 @@
             text-align: center;
             padding: 0 20px;
             line-height: 1.4;
+            min-height: 2.8em;
+            visibility: hidden;
+        }
+        .hint.visible {
+            visibility: visible;
         }
         .loading {
             text-align: center;
             color: #aaa;
+            line-height: 1.6;
+        }
+        .ready-text {
+            text-align: center;
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.05rem;
+            line-height: 1.6;
         }
         .footer {
             margin-top: 32px;
@@ -144,7 +164,7 @@
         <button id="rouletteButton" onclick="toggleRoulette()" disabled>スタート</button>
     </div>
 
-    <div class="hint">
+    <div class="hint" id="hintText">
         ※金色に光るお題についてお話しください。<br>他のお題をタップして切り替えることもできます。
     </div>
 
@@ -180,8 +200,10 @@
                 document.getElementById("themeCounter").innerText = `収録ワード数: ${totalThemes}件`;
 
                 document.getElementById("rouletteButton").disabled = false;
-                executeDrawLogic();
-                renderCard();
+
+                const loadingEl = document.getElementById("loadingText");
+                loadingEl.className = "ready-text";
+                loadingEl.innerHTML = "準備完了！<br>「スタート」を押してルーレットを回してください";
 
             } catch (error) {
                 console.error("データの取得に失敗しました:", error);
@@ -214,6 +236,7 @@
 
                 btn.textContent = "スタート";
                 btn.classList.remove("stop-mode");
+                document.getElementById("hintText").classList.add("visible");
             }
         }
 
@@ -233,6 +256,7 @@
 
         function renderCard() {
             const container = document.getElementById("cardContainer");
+            container.classList.add("has-items");
             container.innerHTML = "";
 
             currentSelectedThemes.forEach((theme, index) => {
